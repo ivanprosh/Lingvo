@@ -1,81 +1,82 @@
 #include <iostream>
 #include <string>
-#include <map>
 #include <cctype>
 #include <sstream>
 #include <conio.h>
-#include <complex>
 
 using namespace std;
 
 istream* input;
 int no_of_errors;
 
-double      value;
-
-int no_of_strings=0;
+double value;
+int curcolumn=0;
+int rows=0;
+int colums=0;
+bool firstrow = true;
 
 enum Token_value
 {
-NUMBER,END,IM,PLUS='+',MINUS='-',MUL='*',PRINT=';'
+NUMBER,END,PRINT,SEPARATE_ROWS=';',CLOSE=']',SEPARATE_TOKENS=',',OPEN='['
 };
 
 Token_value curr_tok=PRINT;
 
-complex<double> term(bool get);
-complex<double> prim(bool get);
-complex<double> expr(bool get);
+int currindex = 0;
+int arr[100];
+void row();
+double prim();
+void matrix(bool get);
 int error(const string &s);
 Token_value get_token();
 
-complex<double> expr(bool get)
+void matrix()
 {
-    complex<double> left=term(get);
+    row();
     for(;;)
     {
         switch(curr_tok)
         {
-            case PLUS   :   left+=term(true);break;
-            case MINUS  :   left-=term(true);break;
-            default     :   return left;
+            case SEPARATE_ROWS  :
+                if(!firstrow && curcolumn!=colums)
+                    {error("ROWS SIZE ARE DIFFERENT"); return;}
+                row();
+                break;
+            case CLOSE  :   if(!firstrow && curcolumn!=colums) error("ROWS SIZE ARE DIFFERENT");
+                            return;
+            default     :   error("] OR ; EXPECTED");return;
         };
     };
 };
 
-complex<double> term(bool get)
+void row()
 {
-    complex<double> left=prim(get);
+    curcolumn = 0;
+    arr[currindex++]=prim(); curcolumn++;
     for(;;)
     {
         switch(curr_tok)
         {
-            case MUL    :   left*=prim(true);break;
+            case SEPARATE_TOKENS    :   arr[currindex++]=prim(); curcolumn++;break;
 
-            default     :   return left;
+            default     :   return;
         };
     };
 };
 
-complex<double> prim(bool get)
+double prim()
 {
-    if(get)get_token();
+    get_token();
     switch(curr_tok)
     {
-        case IM :
-        {
-            complex<double> v(0.0,value);
-            get_token();
-            return v;
-        };
         case NUMBER :
         {
-            complex<double> v(value,0.0);
+            double v = value;
             get_token();
             return v;
         };        
-        case MINUS  :   return -prim(true);
 
-        default     :   return error("PRIMARY EXPRESSION EXPECTED");
+        default     :   return error("FAIL EXPRESSION EXPECTED");
     };
 };
 
@@ -87,9 +88,7 @@ Token_value get_token()
     switch(ch)
     {
         case 0      :   return curr_tok=END;
-
-        case '*': case '+':
-        case '-':
+        case ',':case ']' :case '[':
             return curr_tok=Token_value(ch);
         case '0': case '1': case '2': case '3':
         case '4': case '5': case '6': case '7':
@@ -97,15 +96,14 @@ Token_value get_token()
         case '.'    :
             input->putback(ch);
             *input>>value;
-            input->get(ch);
-            if(ch=='i') return curr_tok=IM;
-            input->putback(ch);
+            if(firstrow) colums++;
             return curr_tok=NUMBER;
         case ';'    :
-        case '\n'   :
-            no_of_strings++;
+            rows++;
+            firstrow = false;
+            return curr_tok=SEPARATE_ROWS;
+        case '\n'    :
             return curr_tok=PRINT;
-
         default     :
             error("INCORECT WORD");
             return curr_tok=PRINT;
@@ -115,9 +113,19 @@ Token_value get_token()
 int error(const string &s)
 {
     no_of_errors++;
-    cerr<<no_of_strings<<" :-: FAIL:"<<s<<'\n';
+    cerr<<rows<<" :-: FAIL:"<<s<<'\n';
+    (*input).ignore(cin.rdbuf()->in_avail());
     return 1;
 };
+
+void print(int* arr)
+{
+    cout << "matrix(<" << rows+1 << ">,<" << colums << ">,<";
+    while(*arr!=0)
+        cout << *(arr++) << ",";
+    cout << '\b';
+    cout << ">)" << endl;
+}
 
 int main(int argc, char* argv[])
 {
@@ -133,17 +141,21 @@ int main(int argc, char* argv[])
             error("To much parameters!!!");
             return 1;
     };
-    complex<double> answer(0.0,0.0);
+
     while(input)
     {
-        get_token();
+        currindex = 0;
+        memset(arr,0,100);
+        get_token();        
         if(curr_tok==END)break;
         if(curr_tok==PRINT)continue;
-        answer = expr(false);
-        if(!no_of_errors)
-            if(answer.imag()) cout<<"OK complex(" << answer.imag() <<", " <<answer.real()<<")" << endl;
-            else cout<<"OK, "<< answer.real() << endl;
-        no_of_errors = 0;
+        if(curr_tok!='[' && curr_tok!='\n') { error("[ EXPECTED"); continue;}
+        matrix();
+        if(!no_of_errors) {
+            print(arr);
+        }
+        no_of_errors = rows = colums = curcolumn = 0;
+        firstrow =true;
     };
     if(input!=&cin)delete input;
 
