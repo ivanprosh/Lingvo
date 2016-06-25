@@ -3,162 +3,169 @@
 #include <cctype>
 #include <sstream>
 #include <conio.h>
+#include <vector>
 
 using namespace std;
 
-istream* input;
 int no_of_errors;
 
-double value;
-int curcolumn=0;
+double number;
 int rows=0;
-int colums=0;
+int columns=0;
 bool firstrow = true;
 
-enum Token_value
-{
-NUMBER,END,PRINT,SEPARATE_ROWS=';',CLOSE=']',SEPARATE_TOKENS=',',OPEN='['
+struct Error{
+    string data;
+    Error(const string& s):data(s){no_of_errors++;}
 };
 
-Token_value curr_tok=PRINT;
-
-int currindex = 0;
-int arr[100];
-void row();
-double prim();
-void matrix(bool get);
-int error(const string &s);
-Token_value get_token();
-
-void matrix()
+enum Symbol
 {
-    row();
-    for(;;)
+NUMBER,END,NEXT,SEPROW=';',FINISH=']',SEPNUM=',',START='['
+};
+
+Symbol cursymb=NEXT;
+
+int matrixsize = 0;
+
+void matrix(vector<int>&);
+void stroki(vector<int>&);
+void stroka(vector<int>&);
+double chislo();
+Symbol symb();
+
+void matrix(vector<int>& result)
+{
+    if(cursymb!='[' && cursymb!=NEXT) { throw Error("Where is [ ?");}
+    //symb();
+    stroki(result);
+    if(columns!=matrixsize && !firstrow) throw Error("different rows size");
+    if(cursymb==FINISH) return;
+    if(cursymb==NEXT) { throw Error("Where is ] ?");}
+}
+
+void stroki(vector<int>& result)
+{
+    rows++;
+    stroka(result);
+    while(1)
     {
-        switch(curr_tok)
+        if(cursymb == SEPROW)
         {
-            case SEPARATE_ROWS  :
-                if(!firstrow && curcolumn!=colums)
-                    {error("ROWS SIZE ARE DIFFERENT"); return;}
-                row();
-                break;
-            case CLOSE  :   if(!firstrow && curcolumn!=colums) error("ROWS SIZE ARE DIFFERENT");
-                            return;
-            default     :   error("] OR ; EXPECTED");return;
-        };
+            if(firstrow) {
+                matrixsize = result.size();
+                firstrow = false;
+            }
+            else if(columns!=matrixsize) throw Error("different rows size");
+            columns=0;
+            rows++;
+            stroka(result);
+        }
+        else return;
     };
-};
+}
 
-void row()
+void stroka(vector<int>& result)
 {
-    curcolumn = 0;
-    arr[currindex++]=prim(); curcolumn++;
-    for(;;)
+    result.push_back(chislo());
+    while(1)
     {
-        switch(curr_tok)
+        if(cursymb == SEPNUM)
         {
-            case SEPARATE_TOKENS    :   arr[currindex++]=prim(); curcolumn++;break;
-
-            default     :   return;
-        };
+           result.push_back(chislo());
+        } else return;
     };
-};
+}
 
-double prim()
+double chislo()
 {
-    get_token();
-    switch(curr_tok)
+    symb();
+    if(cursymb == NUMBER)
     {
-        case NUMBER :
-        {
-            double v = value;
-            get_token();
-            return v;
-        };        
-
-        default     :   return error("FAIL EXPRESSION EXPECTED");
+       columns++;
+       int i = number;
+       symb();
+       return i;
+    } else {
+       throw Error("Wrong query of symbols");
     };
-};
+}
 
-Token_value get_token()
+Symbol symb()
 {
     char ch=0;
-    do{if(!input->get(ch))return curr_tok=END;}
+    do
+    {
+        if(!cin.get(ch))return cursymb=END;
+    }
     while(ch!='\n'&&isspace(ch));
     switch(ch)
     {
-        case 0      :   return curr_tok=END;
+        case 0      :
+            return cursymb=END;
         case ',':case ']' :case '[':
-            return curr_tok=Token_value(ch);
+            return cursymb=Symbol(ch);
         case '0': case '1': case '2': case '3':
         case '4': case '5': case '6': case '7':
         case '8': case '9':
-        case '.'    :
-            input->putback(ch);
-            *input>>value;
-            if(firstrow) colums++;
-            return curr_tok=NUMBER;
+            cin.putback(ch);
+            cin>>number;
+            //if(firstrow) colums++;
+            return cursymb=NUMBER;
         case ';'    :
-            rows++;
-            firstrow = false;
-            return curr_tok=SEPARATE_ROWS;
+            return cursymb=SEPROW;
         case '\n'    :
-            return curr_tok=PRINT;
+            return cursymb=NEXT;
         default     :
-            error("INCORECT WORD");
-            return curr_tok=PRINT;
+            throw Error("Wrong symbol!");
     };
-};
+}
 
-int error(const string &s)
+void print(vector<int>& result)
 {
-    no_of_errors++;
-    cerr<<rows<<" :-: FAIL:"<<s<<'\n';
-    (*input).ignore(cin.rdbuf()->in_avail());
-    return 1;
-};
-
-void print(int* arr)
-{
-    cout << "matrix(<" << rows+1 << ">,<" << colums << ">,<";
-    while(*arr!=0)
-        cout << *(arr++) << ",";
+    vector<int>::iterator it = result.begin();
+    cout << "matrix(<" << rows << ">,<" << columns << ">,<";
+    while(it!=result.end())
+        cout << *(it++) << ",";
     cout << '\b';
     cout << ">)" << endl;
 }
 
-int main(int argc, char* argv[])
+void skip() //функция восстанавливает поток при ошибке ввода (лексической и/или синтаксической)
 {
-    switch(argc)
+    while(cin)
     {
-        case 1:
-            input=&cin;
-            break;
-        case 2:
-            input=new istringstream(argv[1]);
-            break;
-        default:
-            error("To much parameters!!!");
-            return 1;
-    };
+        char ch;
+        cin.get(ch);
+        if(ch==';' || ch=='\n') return;
+    }
+}
+void init() //функция подготавливает глобальные переменные перед началом анализа
+{
+    no_of_errors = rows = columns = matrixsize = 0;
+    firstrow =true;
+}
 
-    while(input)
+int main()
+{
+    while(cin)
     {
-        currindex = 0;
-        memset(arr,0,100);
-        get_token();        
-        if(curr_tok==END)break;
-        if(curr_tok==PRINT)continue;
-        if(curr_tok!='[' && curr_tok!='\n') { error("[ EXPECTED"); continue;}
-        matrix();
-        if(!no_of_errors) {
-            print(arr);
+        std::vector<int> Matrix;
+        Matrix.reserve(100);
+        init();
+        symb();
+        if(cursymb==END)break;
+        if(cursymb==NEXT)continue;
+        try{
+        matrix(Matrix);
         }
-        no_of_errors = rows = colums = curcolumn = 0;
-        firstrow =true;
+        catch(Error err){
+            cerr << "FAIL: " << err.data;
+            skip();
+            continue;
+        }
+        print(Matrix);
     };
-    if(input!=&cin)delete input;
-
-    return no_of_errors;
-};
+    return 0;
+}
 
