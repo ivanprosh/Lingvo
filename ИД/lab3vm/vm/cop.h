@@ -1,0 +1,21 @@
+#ifndef _COP_H
+#define _COP_H
+/*
+	коды операций
+*/         
+#define CNOP	0x00
+#define CPUSH	0x01
+#define CIN	0x02
+#define COUT	0x03
+#define CNVAR	0x04
+#define CGVAR	0x05
+#define CSVAR	0x06
+
+#define CADD	0x10
+#define CSUB	0x11
+#define CMULT	0x12
+#define CDIV	0x13
+
+#define CHALT	0xff
+
+#endif
