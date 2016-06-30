@@ -19,11 +19,13 @@ int columns=0;
 bool firstrow = true;
 char indata[200];
 
+//класс исключения для выдачи сообщения об ошибке
 struct Error{
     string data;
     Error(const string& s):data(s){no_of_errors++;}
 };
 
+//множество допустимых символов(алфавит)
 enum Symbol
 {
 NUMBER,END,NEXT,SEPROW=';',FINISH=']',SEPNUM=',',START='['
@@ -41,12 +43,13 @@ Symbol symb();
 
 void matrix(vector<int>& result)
 {
+	//while (match("\n")) {}
     if(cursymb!='[' && cursymb!=NEXT) { throw Error("Where is [ ?");}
-    //symb();
     stroki(result);
     if(columns!=matrixsize && !firstrow) throw Error("different rows size");
     if(cursymb==FINISH) return;
     if(cursymb==NEXT) { throw Error("Where is ] ?");}
+	//throw Error("Where is ] ?");
 }
 
 void stroki(vector<int>& result)
@@ -101,7 +104,7 @@ Symbol symb()
 {
     char ch=0;
 	int i = -1;
-
+	
 	if (match(",")) return cursymb = SEPNUM;
 	if (match("]")) return cursymb = FINISH;
 	if (match("[")) return cursymb = START;
@@ -113,7 +116,7 @@ Symbol symb()
 		return cursymb = NUMBER;
 	}
 	if (match(";")) return cursymb=SEPROW;
-	if (match("\n")) return cursymb=NEXT;
+	if (match("\n") || !ch) return cursymb=NEXT;
     throw Error("Wrong symbol!");
     
 }
@@ -140,7 +143,7 @@ void skip() //функция восстанавливает поток при ошибке ввода (лексической и/или 
 void init() //функция подготавливает глобальные переменные перед началом анализа
 {
 	match_done();
-    no_of_errors = rows = columns = matrixsize = 0;
+    no_of_errors = rows = columns = matrixsize = curnumber = 0;
     firstrow =true;
 	cin >> indata;
 	match_init(indata);
