@@ -1,8 +1,6 @@
 #ifndef _COP_H
 #define _COP_H
-/*
-	коды операций
-*/         
+
 #define CNOP	0x00
 #define CPUSH	0x01
 #define CIN		0x02
@@ -15,7 +13,11 @@
 #define CSUB	0x11
 #define CMULT	0x12
 #define CDIV	0x13
+/*фюсртыхэ√*/
+#define CSQRT   0x14
 
 #define CHALT	0xff
+
+
 
 #endif
