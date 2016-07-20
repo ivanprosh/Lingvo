@@ -16,7 +16,7 @@
 /*добавлены*/
 #define CSQRT   0x14
 
-#define CHALT	0xff
+#define CHALT	0x20
 
 
 
